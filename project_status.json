@@ -1,0 +1,352 @@
+{
+  "project": {
+    "name": "OrbitDev — Mission Control",
+    "description": "A collaborative dev team progress tracking platform for web app development. Supports responsibility zone ownership, live web preview, UI annotations, branching/review workflow, GitHub integration, and sprint tracking.",
+    "stack": {
+      "framework": "Next.js 16.2.2 (App Router)",
+      "react": "19.2.4",
+      "styling": "Tailwind CSS v4 (utility classes via className, no tailwind.config.js needed)",
+      "language": "TypeScript",
+      "fonts": "Space Grotesk (body, weights 400/500/600) + Space Mono (monospace accents, weights 400/700) via next/font/google",
+      "database_planned": "Supabase",
+      "deployment_planned": "GitHub Pages (static export)"
+    },
+    "design_system": {
+      "theme": "Dark space/techy aesthetic",
+      "background_primary": "#070b14",
+      "background_card": "#0a0f1e",
+      "background_item": "#0d1222",
+      "background_hover": "#0f1828",
+      "border_color": "#1a2540",
+      "text_primary": "#e8f0ff",
+      "text_secondary": "#c8d6f0",
+      "text_muted": "#8899b8",
+      "text_dim": "#3d5278",
+      "text_dimmer": "#2d3d5a",
+      "accent_blue": "#4a9eff",
+      "accent_green": "#22c55e",
+      "accent_purple": "#a855f7",
+      "accent_amber": "#f59e0b",
+      "accent_red": "#ef4444",
+      "font_mono_var": "var(--font-space-mono)",
+      "font_sans_var": "var(--font-space-grotesk)",
+      "border_radius_card": "rounded-xl",
+      "border_radius_item": "rounded-lg",
+      "sidebar_width": "220px",
+      "notes": "Inline style is used for fontFamily since Tailwind v4 does not expose font-mono/font-sans as utility classes tied to CSS vars in this setup. Always use style={{ fontFamily: 'var(--font-space-mono)' }} for mono text."
+    }
+  },
+  "completed": {
+    "app/layout.tsx": {
+      "status": "done",
+      "description": "Root layout. Loads Space Grotesk and Space Mono from next/font/google. Sets dark background on body. Exports metadata with app title."
+    },
+    "app/globals.css": {
+      "status": "done",
+      "description": "Imports Tailwind v4. Sets CSS font vars. Styles custom scrollbar (4px, dark track/thumb). Sets body font and background."
+    },
+    "app/page.tsx": {
+      "status": "done",
+      "description": "Root page. Immediately redirects to /dashboard using next/navigation redirect()."
+    },
+    "app/data.ts": {
+      "status": "done",
+      "description": "Central mock data file. Exports: teamMembers (5 devs with initials, name, role, zone, status, color), sprintZones (5 zones with label/pct/color), recentCommits (5 commits with hash/msg/author/branch/time), pullRequests (5 PRs with title/author/target/status), weeklyCommits, weekLabels, monthlyCommits, monthLabels, zoneStatuses. All data is static mock data — no Supabase integration yet."
+    },
+    "app/dashboard/layout.tsx": {
+      "status": "done",
+      "description": "Dashboard section layout. Renders Sidebar on the left (fixed, 220px) and a main content area with ml-[220px] on the right. All /dashboard/* routes use this layout."
+    },
+    "app/dashboard/page.tsx": {
+      "status": "done",
+      "description": "Main dashboard home page (/dashboard). Assembles all dashboard components. Layout: topbar with title + live sync badge, 4-col metric cards grid, 3-col mid row (CommitChart + SprintProgress + TeamPanel), 3-col bottom row (RecentCommits + PullRequests + ZonesPanel)."
+    },
+    "app/components/Sidebar.tsx": {
+      "status": "done",
+      "description": "Fixed left sidebar (client component). Shows ORBITDEV logo + tagline. Nav items: Dashboard (/dashboard), Projects (/dashboard/projects), Sprints (/dashboard/sprints), Team (/dashboard/team), Branches (/dashboard/branches), Reports (/dashboard/reports). Active state uses usePathname() — blue left border + bg highlight. Bottom: user avatar (hardcoded 'YO' initials, you@team.dev, admin role)."
+    },
+    "app/components/MetricCard.tsx": {
+      "status": "done",
+      "description": "Reusable metric card component. Props: label, value, sub, delta, deltaUp (bool), barPct (0-100), barColor (CSS gradient string). Renders: mono label, large mono value, sub text with delta badge (green if up, red if down), progress bar with custom color."
+    },
+    "app/components/CommitChart.tsx": {
+      "status": "done",
+      "description": "Client component. Bar chart showing commit activity. Toggle between 'week' (14 bars) and 'month' (14 bars) views using useState. Last bar is highlighted blue (#4a9eff). Data sourced from app/data.ts. No external chart library — pure CSS div bars."
+    },
+    "app/components/SprintProgress.tsx": {
+      "status": "done",
+      "description": "Sprint 7 progress panel. Shows per-zone progress bars (Frontend/Backend/Database/Auth/DevOps) with individual accent colors. Calculates and displays overall average percentage at the bottom. Data from sprintZones in data.ts."
+    },
+    "app/components/TeamPanel.tsx": {
+      "status": "done",
+      "description": "Team online panel. Lists 5 team members with avatar (initials circle, color per member), name, role, and presence status (active=green, away/offline=dim). Active count shown in header. Data from teamMembers in data.ts."
+    },
+    "app/components/RecentCommits.tsx": {
+      "status": "done",
+      "description": "Recent commits feed. Shows 5 commits with hash badge (mono, blue), commit message, author + branch (mono, dim), and relative time. Data from recentCommits in data.ts."
+    },
+    "app/components/PullRequests.tsx": {
+      "status": "done",
+      "description": "Pull requests list. Shows 5 PRs with title, author→target, and status badge. Status color coding: open=blue, merged=green, review=amber. Left border color matches status. Open count shown in header. Data from pullRequests in data.ts."
+    },
+    "app/components/ZonesPanel.tsx": {
+      "status": "done",
+      "description": "Responsibility zones panel. Lists 5 zones, each with owner avatar (square, color per member), zone name, owner name, and zone status badge (live/active/wip/idle). Data from teamMembers + zoneStatuses in data.ts."
+    }
+  },
+  "stub_pages": {
+    "description": "These pages exist as placeholder files with a heading and 'Coming soon' text. They are routed correctly and the sidebar links to them, but have no real content.",
+    "pages": [
+      {
+        "path": "app/dashboard/projects/page.tsx",
+        "route": "/dashboard/projects",
+        "planned_content": "Project workspace page — the most complex page. See 'missing' section for full spec."
+      },
+      {
+        "path": "app/dashboard/sprints/page.tsx",
+        "route": "/dashboard/sprints",
+        "planned_content": "Kanban sprint board with task cards organized by status columns (Todo, In Progress, In Review, Done)."
+      },
+      {
+        "path": "app/dashboard/team/page.tsx",
+        "route": "/dashboard/team",
+        "planned_content": "Individual dev profile cards with GitHub activity graph, commit history, zone ownership, and PR stats."
+      },
+      {
+        "path": "app/dashboard/branches/page.tsx",
+        "route": "/dashboard/branches",
+        "planned_content": "Branch propose/diff/merge workflow with reviewer accept/reject flow."
+      },
+      {
+        "path": "app/dashboard/reports/page.tsx",
+        "route": "/dashboard/reports",
+        "planned_content": "Velocity and burndown charts with CSV/PDF export functionality."
+      }
+    ]
+  },
+  "missing": {
+    "pages": {
+      "projects_workspace": {
+        "route": "/dashboard/projects",
+        "priority": "highest",
+        "description": "The core collaborative workspace. Each project is a web app the team is building together.",
+        "features": [
+          {
+            "name": "Project list view",
+            "description": "Grid of project cards. Each card shows project name, team members assigned, overall progress, last activity, and a 'Open Workspace' button."
+          },
+          {
+            "name": "Workspace view",
+            "route": "/dashboard/projects/[id]",
+            "description": "Full-screen workspace for a single project. Contains the live preview panel and the annotation/collaboration tools."
+          },
+          {
+            "name": "Live web preview panel",
+            "description": "An iframe or screenshot view of the deployed web app URL. Should support switching between Mobile (375px), Tablet (768px), and Desktop (1280px) viewport breakpoints via a toolbar. For the stub, a placeholder frame with device mockup UI is acceptable.",
+            "technical_note": "Real implementation: iframe sandbox for simple apps, or Puppeteer screenshot service for complex ones. For frontend-only stub, render a placeholder frame with a fake browser chrome (URL bar, reload button) around an iframe pointing to a configurable URL."
+          },
+          {
+            "name": "Annotation pin system",
+            "description": "Team members can click anywhere on the live preview to drop a pin/annotation. Each pin shows a number badge. Clicking a pin opens a sidebar panel with the comment thread. Pins have severity tags: blocker (red), suggestion (blue), question (amber). Annotations are attached to X/Y coordinates on the preview.",
+            "technical_note": "Implement as an overlay div on top of the iframe with absolute-positioned pin markers. Use React state for pin data. Each pin: { id, x, y, author, severity, comments: [{author, text, time}], resolved: bool }."
+          },
+          {
+            "name": "Annotation sidebar",
+            "description": "Collapsible right sidebar listing all annotations for the current page/view. Each entry shows: pin number, severity badge, author avatar, comment text, reply count, and a 'Mark resolved' button. Clicking an entry highlights the corresponding pin on the preview."
+          },
+          {
+            "name": "Responsibility zone overlay",
+            "description": "A toggle that draws colored bounding boxes over sections of the preview, each labeled with the owning developer's name and color. E.g. Kim Lee owns the header zone (blue box), Marco owns the API calls layer (purple box). These are manually defined regions stored in data."
+          },
+          {
+            "name": "Presence cursors",
+            "description": "When multiple team members are viewing the preview simultaneously, show floating cursor labels with their name. For the frontend stub, simulate 2-3 cursors that move around slowly using animated CSS or requestAnimationFrame.",
+            "technical_note": "Real implementation requires WebSockets (Socket.io). Stub: use setInterval to move fake cursors."
+          },
+          {
+            "name": "Branching UI",
+            "description": "A 'Create Branch' button that opens a modal. The modal lets a dev name their branch and describe the change. Once created, the branch appears in a branch list panel. The branch represents a proposed modification to the project."
+          }
+        ]
+      },
+      "sprints_board": {
+        "route": "/dashboard/sprints",
+        "priority": "high",
+        "description": "Kanban-style sprint board.",
+        "features": [
+          {
+            "name": "Sprint selector",
+            "description": "Dropdown or tab row to switch between Sprint 5, 6, 7 (current), etc."
+          },
+          {
+            "name": "Kanban columns",
+            "description": "Four columns: Backlog, In Progress, In Review, Done. Each column shows a task count badge.",
+            "columns": ["Backlog", "In Progress", "In Review", "Done"]
+          },
+          {
+            "name": "Task cards",
+            "description": "Each card shows: task title, assigned dev avatar, priority badge (P0/P1/P2), zone tag (Frontend/Backend/etc.), linked PR if any, and estimated story points.",
+            "technical_note": "Drag-and-drop between columns is ideal (use @dnd-kit/core or react-beautiful-dnd) but a simpler click-to-move approach is acceptable for the stub."
+          },
+          {
+            "name": "Sprint stats bar",
+            "description": "Above the board: total points, completed points, velocity sparkline, days remaining."
+          },
+          {
+            "name": "Add task button",
+            "description": "Per-column button to add a new task card. Opens an inline form or modal."
+          }
+        ]
+      },
+      "team_profiles": {
+        "route": "/dashboard/team",
+        "priority": "medium",
+        "description": "Team member directory and individual profiles.",
+        "features": [
+          {
+            "name": "Team grid",
+            "description": "Cards for each of the 5 team members. Each card: avatar, name, role, zone, status indicator, commit count this sprint, PR count, and a 'View Profile' link."
+          },
+          {
+            "name": "Individual profile page",
+            "route": "/dashboard/team/[id]",
+            "description": "Detailed view for one dev. Shows: GitHub-style contribution heatmap (last 30 days), recent commits list, open PRs, assigned tasks, zone ownership badge, and a bio/skills section."
+          },
+          {
+            "name": "Activity heatmap",
+            "description": "A grid of colored squares representing commit activity over the last 30 days. More commits = brighter blue. Similar to GitHub's contribution graph but simplified.",
+            "technical_note": "Pure CSS grid, no library needed. Generate random activity data from data.ts."
+          }
+        ]
+      },
+      "branches_review": {
+        "route": "/dashboard/branches",
+        "priority": "high",
+        "description": "Branch proposal, diff viewing, and reviewer accept/reject workflow.",
+        "features": [
+          {
+            "name": "Branch list",
+            "description": "List of all active branches. Each row: branch name, author, base branch, status (open/merged/rejected/draft), created time, linked zone, reviewer assigned."
+          },
+          {
+            "name": "Branch detail view",
+            "route": "/dashboard/branches/[id]",
+            "description": "Full detail page for one branch. Shows: branch metadata, before/after UI diff (side-by-side panels simulating old vs new preview), file changes list, reviewer decision panel."
+          },
+          {
+            "name": "Before/after diff panel",
+            "description": "Side-by-side comparison of the original view vs the proposed branch change. For the stub, use two placeholder iframe/image panels with a divider. Label left 'Before (main)' and right 'After (branch)'."
+          },
+          {
+            "name": "Reviewer decision panel",
+            "description": "Shows who is assigned as reviewer. Two action buttons: 'Accept & Merge' (green) and 'Request Changes' (amber). A text area for leaving review comments. If the current user is not the reviewer, buttons are disabled with a tooltip."
+          },
+          {
+            "name": "Review comments thread",
+            "description": "Inline comment thread on the branch, similar to a GitHub PR review. Each comment shows author avatar, text, timestamp, and a reply button."
+          }
+        ]
+      },
+      "reports": {
+        "route": "/dashboard/reports",
+        "priority": "low",
+        "description": "Reporting and analytics for the sprint/team.",
+        "features": [
+          {
+            "name": "Velocity chart",
+            "description": "Bar chart comparing story points completed per sprint over the last 6 sprints. Use the same pure-CSS bar chart approach as CommitChart or add recharts/chart.js."
+          },
+          {
+            "name": "Burndown chart",
+            "description": "Line chart showing remaining story points over the sprint timeline. Ideal line vs actual line."
+          },
+          {
+            "name": "Per-member contribution table",
+            "description": "Table showing each dev's commits, PRs merged, issues closed, and review comments for the current sprint."
+          },
+          {
+            "name": "Export buttons",
+            "description": "CSV export button (download a .csv of the contribution table) and PDF export button (window.print() or jsPDF). Both are frontend-only."
+          }
+        ]
+      }
+    },
+    "infrastructure": {
+      "supabase_integration": {
+        "status": "not started",
+        "description": "All data is currently static mock data in app/data.ts. Supabase integration needs to be added.",
+        "tables_needed": [
+          "users (id, email, name, initials, role, zone, avatar_color)",
+          "projects (id, name, url, description, created_at)",
+          "sprints (id, project_id, name, number, start_date, end_date)",
+          "tasks (id, sprint_id, title, status, assignee_id, zone, priority, points)",
+          "commits (id, project_id, hash, message, author_id, branch, created_at)",
+          "pull_requests (id, project_id, title, author_id, target_branch, status, created_at)",
+          "branches (id, project_id, name, author_id, reviewer_id, status, description, created_at)",
+          "annotations (id, project_id, x, y, severity, author_id, resolved, created_at)",
+          "annotation_comments (id, annotation_id, author_id, text, created_at)"
+        ],
+        "auth": "Supabase Auth with GitHub OAuth provider. Users log in with their GitHub account. Row Level Security (RLS) should be enabled on all tables."
+      },
+      "github_integration": {
+        "status": "not started",
+        "description": "GitHub App or OAuth App needs to be registered. Webhook listener endpoint needed to receive push/PR/issue events in real time.",
+        "endpoints_needed": [
+          "POST /api/webhooks/github — receives and validates GitHub webhook payloads (HMAC signature check)",
+          "GET /api/github/sync — triggers a manual full sync of commits/PRs from GitHub REST API"
+        ],
+        "technical_note": "For GitHub Pages static deployment, webhook listener and GitHub API calls cannot be done from Next.js API routes. A separate backend service (Node.js/Express on Railway or Render) will be needed, or use Supabase Edge Functions."
+      },
+      "realtime": {
+        "status": "not started",
+        "description": "Real-time features (presence cursors, live annotation sync, live PR status updates) require WebSockets.",
+        "options": [
+          "Supabase Realtime — built-in broadcast/presence channels, works well for cursor positions and annotation updates",
+          "Socket.io on a separate Node.js server"
+        ],
+        "recommended": "Supabase Realtime since the project already uses Supabase. Use supabase.channel() with presence for cursor tracking and postgres_changes for data sync."
+      },
+      "static_export": {
+        "status": "not started",
+        "description": "For GitHub Pages deployment, Next.js needs to be configured for static export.",
+        "changes_needed": [
+          "Add 'output: export' to next.config.ts",
+          "Add 'basePath' if deploying to a subdirectory (e.g. /dashboard-repo)",
+          "All pages must be statically renderable — no server-side data fetching at request time",
+          "Replace Next.js API routes with Supabase client-side calls or external backend"
+        ]
+      }
+    },
+    "components_missing": [
+      {
+        "name": "Modal",
+        "description": "Reusable modal/dialog component. Needed for: create branch, add task, annotation detail. Should use a dark overlay, centered card, close on Escape or backdrop click."
+      },
+      {
+        "name": "Avatar",
+        "description": "Reusable avatar component used in multiple places. Props: initials, bgColor, textColor, size (sm/md/lg), shape (circle/square). Currently duplicated inline in multiple components."
+      },
+      {
+        "name": "Badge / StatusTag",
+        "description": "Reusable badge component for status labels (live/active/wip/idle, open/merged/review, P0/P1/P2). Currently duplicated inline."
+      },
+      {
+        "name": "PageHeader",
+        "description": "Reusable page header with mono eyebrow label, large title, and optional right-side actions. Used on every page — currently duplicated."
+      },
+      {
+        "name": "EmptyState",
+        "description": "Empty state component for lists/tables when there is no data. Shows an icon, message, and optional CTA button."
+      }
+    ]
+  },
+  "conventions": {
+    "file_structure": "Next.js App Router. All pages at app/dashboard/[section]/page.tsx. Shared components at app/components/. Data at app/data.ts. No separate lib/ or utils/ folder yet.",
+    "client_vs_server": "Components using useState/useEffect/event handlers must have 'use client' at the top. Components that only render data can be server components (no directive needed).",
+    "styling": "Tailwind v4 utility classes via className. Inline style={{ }} used only for dynamic values (colors from data, fontFamily for mono). No CSS modules. No styled-components.",
+    "data": "All mock data lives in app/data.ts and is imported directly into components. When Supabase is added, replace with async server component fetches or client-side useEffect + supabase-js.",
+    "colors": "Always use the hex values from the design_system section above. Do not introduce new colors. Use the accent colors for their semantic meaning (blue=info/active, green=success/live, amber=warning/wip, red=error/idle/danger, purple=special).",
+    "typography": "Body text: Space Grotesk via className. Monospace/code/labels/hashes/badges: always add style={{ fontFamily: 'var(--font-space-mono)' }} inline.",
+    "icons": "Inline SVG only. No icon libraries. Keep viewBox 16x16, fill='currentColor', width/height 16."
+  }
+}

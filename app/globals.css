@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-space-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-space-grotesk), sans-serif;
+  background: #070b14;
+  color: #c8d6f0;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0f1e;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a2540;
+  border-radius: 2px;
+}
