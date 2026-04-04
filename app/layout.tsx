@@ -15,7 +15,7 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OrbitDev — Mission Control",
+  title: "OrbitDev V2 — Mission Control",
   description: "Dev team progress tracking dashboard",
 };
 
