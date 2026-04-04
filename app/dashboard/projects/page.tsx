@@ -475,6 +475,140 @@ function WorkspaceView({ project, onBack, currentUser }: { project: DbProject; o
   );
 }
 
+// ── New Project Modal ─────────────────────────────────────
+
+function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated: (p: DbProject) => void }) {
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate() {
+    if (!name.trim()) { setError('Project name is required.'); return; }
+
+    // Validate GitHub URL format
+    const trimmedUrl = url.trim();
+    if (trimmedUrl && !/^https:\/\/github\.com\/[^/]+\/[^/]+/.test(trimmedUrl)) {
+      setError('GitHub URL must be in the format: https://github.com/owner/repo');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const { data, error: dbError } = await supabase
+      .from('projects')
+      .insert({
+        name: name.trim(),
+        url: trimmedUrl || null,
+        description: description.trim() || null,
+      })
+      .select()
+      .single();
+
+    setSaving(false);
+
+    if (dbError) {
+      setError(dbError.message);
+      return;
+    }
+
+    onCreated(data as DbProject);
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0a0f1e] border border-[#1a2540] rounded-xl p-6 w-[460px] shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>
+          // new project
+        </div>
+        <div className="text-[16px] font-semibold text-[#e8f0ff] mb-5">Add Project</div>
+
+        <div className="flex flex-col gap-3">
+          {/* Name */}
+          <div>
+            <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>
+              project name <span className="text-[#ef4444]">*</span>
+            </div>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="My App"
+              className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            />
+          </div>
+
+          {/* GitHub URL */}
+          <div>
+            <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>
+              github repo url
+            </div>
+            <input
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="https://github.com/owner/repo"
+              className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            />
+            <div className="text-[10px] text-[#2d3d5a] mt-1" style={{ fontFamily: 'var(--font-space-mono)' }}>
+              used to match incoming GitHub webhook events
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>
+              description
+            </div>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What is this project?"
+              rows={2}
+              className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff] resize-none"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="text-[11px] text-[#ef4444] px-3 py-2 rounded-lg" style={{ background: '#2a0808', border: '1px solid #5a1010' }}>
+              {error}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 rounded-lg text-[12px] text-[#3d5278] border border-[#1a2540] hover:text-[#c8d6f0] transition-all cursor-pointer"
+            >
+              cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={saving}
+              className="flex-1 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer disabled:opacity-50"
+            >
+              {saving ? 'creating…' : '+ create project'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────
 
 export default function ProjectsPage() {
@@ -482,6 +616,7 @@ export default function ProjectsPage() {
   const [activeProject, setActiveProject] = useState<DbProject | null>(null);
   const [currentUser, setCurrentUser] = useState<DbUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNewProject, setShowNewProject] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -520,16 +655,30 @@ export default function ProjectsPage() {
 
   return (
     <div className="p-7">
-      <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>
-        // projects
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>
+            // projects
+          </div>
+          <div className="text-[20px] font-semibold text-[#e8f0ff]">All Projects</div>
+        </div>
+        <button
+          onClick={() => setShowNewProject(true)}
+          className="px-4 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer"
+          style={{ fontFamily: 'var(--font-space-mono)' }}
+        >
+          + new project
+        </button>
       </div>
-      <div className="text-[20px] font-semibold text-[#e8f0ff] mb-6">All Projects</div>
 
       {projects.length === 0 ? (
         <div className="text-center py-16 text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
           <div className="text-[32px] mb-3 opacity-30">◉</div>
           <div className="text-[12px]">no projects yet</div>
-          <div className="text-[11px] mt-1">add a project row in Supabase to get started</div>
+          <div className="text-[11px] mt-1 cursor-pointer hover:text-[#4a9eff] transition-colors" onClick={() => setShowNewProject(true)}>
+            click + new project to get started
+          </div>
         </div>
       ) : (
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
@@ -537,6 +686,13 @@ export default function ProjectsPage() {
             <ProjectCard key={p.id} project={p} onOpen={() => setActiveProject(p)} />
           ))}
         </div>
+      )}
+
+      {showNewProject && (
+        <NewProjectModal
+          onClose={() => setShowNewProject(false)}
+          onCreated={(p) => setProjects(prev => [p, ...prev])}
+        />
       )}
     </div>
   );
