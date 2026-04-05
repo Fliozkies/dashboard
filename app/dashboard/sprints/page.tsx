@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase, DbTask, DbUser } from '../../lib/supabase';
-import { getTasksBySprint, updateTaskStatus, createTask, getSprintsByProject, getProjects } from '../../lib/queries';
+import { getTasksBySprint, updateTaskStatus, createTask, getSprintsByProject, getProjects, createSprint, createSprintZones } from '../../lib/queries';
 
 type Column = { id: DbTask['status']; label: string; color: string };
 
@@ -154,13 +154,83 @@ function AddTaskForm({ sprintId, status, currentUser, onAdd, onClose }: AddTaskF
   );
 }
 
+function NewSprintModal({ projectId, nextNumber, onClose, onCreated }: {
+  projectId: string;
+  nextNumber: number;
+  onClose: () => void;
+  onCreated: (sprint: { id: string; name: string; number: number }) => void;
+}) {
+  const [name, setName] = useState(`Sprint ${nextNumber}`);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate() {
+    if (!name.trim()) { setError('Sprint name is required.'); return; }
+    setSaving(true);
+    setError(null);
+    const sprint = await createSprint({
+      project_id: projectId,
+      name: name.trim(),
+      number: nextNumber,
+      start_date: startDate || null,
+      end_date: endDate || null,
+    });
+    if (!sprint) { setError('Failed to create sprint.'); setSaving(false); return; }
+    await createSprintZones(sprint.id);
+    onCreated({ id: sprint.id, name: sprint.name, number: sprint.number });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
+      <div className="bg-[#0a0f1e] border border-[#1a2540] rounded-xl p-6 w-[420px] shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>// new sprint</div>
+        <div className="text-[16px] font-semibold text-[#e8f0ff] mb-5">Create Sprint</div>
+        <div className="flex flex-col gap-3">
+          <div>
+            <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>sprint name <span className="text-[#ef4444]">*</span></div>
+            <input value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+              style={{ fontFamily: 'var(--font-space-mono)' }} />
+          </div>
+          <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <div>
+              <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>start date</div>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] outline-none focus:border-[#4a9eff]"
+                style={{ fontFamily: 'var(--font-space-mono)', colorScheme: 'dark' }} />
+            </div>
+            <div>
+              <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>end date</div>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] outline-none focus:border-[#4a9eff]"
+                style={{ fontFamily: 'var(--font-space-mono)', colorScheme: 'dark' }} />
+            </div>
+          </div>
+          {error && <div className="text-[11px] text-[#ef4444] px-3 py-2 rounded-lg" style={{ background: '#2a0808', border: '1px solid #5a1010' }}>{error}</div>}
+          <div className="flex gap-2 mt-2">
+            <button onClick={onClose} className="flex-1 py-2 rounded-lg text-[12px] text-[#3d5278] border border-[#1a2540] hover:text-[#c8d6f0] transition-all cursor-pointer">cancel</button>
+            <button onClick={handleCreate} disabled={saving} className="flex-1 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer disabled:opacity-50">
+              {saving ? 'creating…' : '+ create sprint'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SprintsPage() {
   const [tasks, setTasks] = useState<DbTask[]>([]);
   const [sprintId, setSprintId] = useState<string | null>(null);
   const [sprints, setSprints] = useState<{ id: string; name: string; number: number }[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<DbUser | null>(null);
   const [addingTo, setAddingTo] = useState<DbTask['status'] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNewSprint, setShowNewSprint] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -173,6 +243,7 @@ export default function SprintsPage() {
       // Get first project's sprints
       const projects = await getProjects();
       if (projects.length > 0) {
+        setProjectId(projects[0].id);
         const sprintList = await getSprintsByProject(projects[0].id);
         setSprints(sprintList);
         if (sprintList.length > 0) {
@@ -219,21 +290,32 @@ export default function SprintsPage() {
           </div>
           <div className="text-[20px] font-semibold text-[#e8f0ff]">Sprint Board</div>
         </div>
-        {/* Sprint selector */}
-        {sprints.length > 0 && (
-          <div className="flex gap-1">
-            {sprints.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setSprintId(s.id)}
-                className={`text-[11px] px-3 py-1.5 rounded border transition-all cursor-pointer ${s.id === sprintId ? 'bg-[#0d1a30] text-[#4a9eff] border-[#1a3060]' : 'text-[#3d5278] border-[#1a2540] hover:text-[#6b7fa3]'}`}
-                style={{ fontFamily: 'var(--font-space-mono)' }}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Sprint selector */}
+          {sprints.length > 0 && (
+            <div className="flex gap-1">
+              {sprints.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setSprintId(s.id)}
+                  className={`text-[11px] px-3 py-1.5 rounded border transition-all cursor-pointer ${s.id === sprintId ? 'bg-[#0d1a30] text-[#4a9eff] border-[#1a3060]' : 'text-[#3d5278] border-[#1a2540] hover:text-[#6b7fa3]'}`}
+                  style={{ fontFamily: 'var(--font-space-mono)' }}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {projectId && (
+            <button
+              onClick={() => setShowNewSprint(true)}
+              className="text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            >
+              + new sprint
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats bar */}
@@ -259,7 +341,14 @@ export default function SprintsPage() {
         <div className="text-center py-16 text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
           <div className="text-[32px] mb-3 opacity-30">⬡</div>
           <div className="text-[12px]">no sprints yet</div>
-          <div className="text-[11px] mt-1">add a sprint row linked to a project in Supabase</div>
+          {projectId && (
+            <button
+              onClick={() => setShowNewSprint(true)}
+              className="mt-3 text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
+            >
+              + create your first sprint
+            </button>
+          )}
         </div>
       ) : (
         /* Kanban board */
@@ -307,6 +396,19 @@ export default function SprintsPage() {
             );
           })}
         </div>
+      )}
+
+      {showNewSprint && projectId && (
+        <NewSprintModal
+          projectId={projectId}
+          nextNumber={sprints.length + 1}
+          onClose={() => setShowNewSprint(false)}
+          onCreated={(sprint) => {
+            setSprints(prev => [sprint, ...prev]);
+            setSprintId(sprint.id);
+            setTasks([]);
+          }}
+        />
       )}
     </div>
   );

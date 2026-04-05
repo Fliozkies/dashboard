@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { DbUser, DbCommit, DbPullRequest } from '../../lib/supabase';
-import { getTeamMembers, getRecentCommits, getPullRequests } from '../../lib/queries';
+import { getTeamMembers, getRecentCommits, getPullRequests, createUser } from '../../lib/queries';
 
 // ── Activity heatmap (last 30 days from commits) ──────────
 
@@ -153,6 +153,112 @@ function MemberProfile({ member, commits, prs, onBack }: {
   );
 }
 
+// ── New Member Modal ──────────────────────────────────────
+
+const AVATAR_COLORS = [
+  { bg: '#0a1f3a', text: '#4a9eff' },
+  { bg: '#052210', text: '#22c55e' },
+  { bg: '#200520', text: '#a855f7' },
+  { bg: '#1f1500', text: '#f59e0b' },
+  { bg: '#2a0808', text: '#ef4444' },
+];
+
+function NewMemberModal({ onClose, onCreated }: { onClose: () => void; onCreated: (u: DbUser) => void }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('');
+  const [zone, setZone] = useState('');
+  const [colorIdx, setColorIdx] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const initials = name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  async function handleCreate() {
+    if (!name.trim()) { setError('Name is required.'); return; }
+    if (!email.trim()) { setError('Email is required.'); return; }
+    if (!role.trim()) { setError('Role is required.'); return; }
+    if (!zone.trim()) { setError('Zone is required.'); return; }
+    setSaving(true);
+    setError(null);
+    const user = await createUser({
+      email: email.trim(),
+      name: name.trim(),
+      initials: initials || '?',
+      role: role.trim(),
+      zone: zone.trim(),
+      avatar_color: AVATAR_COLORS[colorIdx],
+      status: 'offline',
+    });
+    setSaving(false);
+    if (!user) { setError('Failed to create member. Email may already exist.'); return; }
+    onCreated(user as DbUser);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
+      <div className="bg-[#0a0f1e] border border-[#1a2540] rounded-xl p-6 w-[460px] shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>// new member</div>
+        <div className="text-[16px] font-semibold text-[#e8f0ff] mb-5">Add Team Member</div>
+        <div className="flex flex-col gap-3">
+          {/* Avatar preview + color picker */}
+          <div className="flex items-center gap-4 mb-1">
+            <div className="w-[48px] h-[48px] rounded-full flex items-center justify-center text-[16px] font-bold flex-shrink-0"
+              style={{ background: AVATAR_COLORS[colorIdx].bg, color: AVATAR_COLORS[colorIdx].text }}>
+              {initials || '?'}
+            </div>
+            <div className="flex gap-1.5">
+              {AVATAR_COLORS.map((c, i) => (
+                <button key={i} onClick={() => setColorIdx(i)}
+                  className="w-6 h-6 rounded-full border-2 transition-all cursor-pointer"
+                  style={{ background: c.bg, borderColor: i === colorIdx ? c.text : 'transparent' }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <div>
+              <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>name <span className="text-[#ef4444]">*</span></div>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Kim Lee"
+                className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+                style={{ fontFamily: 'var(--font-space-mono)' }} />
+            </div>
+            <div>
+              <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>email <span className="text-[#ef4444]">*</span></div>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="kim@team.com" type="email"
+                className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+                style={{ fontFamily: 'var(--font-space-mono)' }} />
+            </div>
+            <div>
+              <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>role <span className="text-[#ef4444]">*</span></div>
+              <input value={role} onChange={e => setRole(e.target.value)} placeholder="Frontend"
+                className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+                style={{ fontFamily: 'var(--font-space-mono)' }} />
+            </div>
+            <div>
+              <div className="text-[11px] text-[#3d5278] mb-1.5" style={{ fontFamily: 'var(--font-space-mono)' }}>zone <span className="text-[#ef4444]">*</span></div>
+              <input value={zone} onChange={e => setZone(e.target.value)} placeholder="Frontend / Preview"
+                className="w-full text-[12px] px-3 py-2 rounded-lg bg-[#0d1222] border border-[#1a2540] text-[#c8d6f0] placeholder:text-[#2d3d5a] outline-none focus:border-[#4a9eff]"
+                style={{ fontFamily: 'var(--font-space-mono)' }} />
+            </div>
+          </div>
+
+          {error && <div className="text-[11px] text-[#ef4444] px-3 py-2 rounded-lg" style={{ background: '#2a0808', border: '1px solid #5a1010' }}>{error}</div>}
+
+          <div className="flex gap-2 mt-2">
+            <button onClick={onClose} className="flex-1 py-2 rounded-lg text-[12px] text-[#3d5278] border border-[#1a2540] hover:text-[#c8d6f0] transition-all cursor-pointer">cancel</button>
+            <button onClick={handleCreate} disabled={saving} className="flex-1 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer disabled:opacity-50">
+              {saving ? 'adding…' : '+ add member'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────
 
 export default function TeamPage() {
@@ -161,6 +267,7 @@ export default function TeamPage() {
   const [prs, setPRs] = useState<DbPullRequest[]>([]);
   const [selected, setSelected] = useState<DbUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNewMember, setShowNewMember] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -181,10 +288,21 @@ export default function TeamPage() {
 
   return (
     <div className="p-7">
-      <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>
-        // team
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="text-[11px] text-[#4a9eff] tracking-[3px] uppercase mb-1" style={{ fontFamily: 'var(--font-space-mono)' }}>
+            // team
+          </div>
+          <div className="text-[20px] font-semibold text-[#e8f0ff]">Team Members</div>
+        </div>
+        <button
+          onClick={() => setShowNewMember(true)}
+          className="px-4 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer"
+          style={{ fontFamily: 'var(--font-space-mono)' }}
+        >
+          + add member
+        </button>
       </div>
-      <div className="text-[20px] font-semibold text-[#e8f0ff] mb-6">Team Members</div>
 
       {loading ? (
         <div className="text-[12px] text-[#3d5278]" style={{ fontFamily: 'var(--font-space-mono)' }}>loading…</div>
@@ -192,7 +310,12 @@ export default function TeamPage() {
         <div className="text-center py-16 text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
           <div className="text-[32px] mb-3 opacity-30">◎</div>
           <div className="text-[12px]">no team members yet</div>
-          <div className="text-[11px] mt-1">add rows to the users table in Supabase</div>
+          <button
+            onClick={() => setShowNewMember(true)}
+            className="mt-3 text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
+          >
+            + add your first member
+          </button>
         </div>
       ) : (
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
@@ -245,6 +368,13 @@ export default function TeamPage() {
             );
           })}
         </div>
+      )}
+
+      {showNewMember && (
+        <NewMemberModal
+          onClose={() => setShowNewMember(false)}
+          onCreated={(u) => setMembers(prev => [...prev, u])}
+        />
       )}
     </div>
   );

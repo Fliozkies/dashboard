@@ -16,6 +16,7 @@ interface Props {
 export default async function SprintProgress({ projectId }: Props) {
   let zones = fallbackZones;
   let sprintName = 'Sprint';
+  let daysLeft: number | null = null;
 
   if (projectId) {
     const sprint = await getLatestSprint(projectId);
@@ -23,15 +24,17 @@ export default async function SprintProgress({ projectId }: Props) {
       sprintName = sprint.name;
       const fetched = await getSprintZones(sprint.id);
       if (fetched.length > 0) zones = fetched;
+
+      if (sprint.end_date) {
+        const end = new Date(sprint.end_date);
+        const now = new Date();
+        const diff = Math.ceil((end.getTime() - now.getTime()) / 86400000);
+        daysLeft = diff > 0 ? diff : 0;
+      }
     }
   }
 
   const overall = Math.round(zones.reduce((a, z) => a + z.pct, 0) / zones.length);
-
-  // Calculate days remaining if we have a sprint
-  const daysLeft = (() => {
-    return null; // will be enriched when projectId is wired in
-  })();
 
   return (
     <div className="bg-[#0a0f1e] border border-[#1a2540] rounded-xl p-5">

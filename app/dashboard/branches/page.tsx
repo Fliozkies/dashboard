@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase, DbBranch, DbUser } from '../../lib/supabase';
-import { getBranches, updateBranchStatus, } from '../../lib/queries';
+import { getBranches, updateBranchStatus, getProjects } from '../../lib/queries';
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; border: string }> = {
   open: { bg: '#0d1a30', color: '#4a9eff', border: '#1a3060' },

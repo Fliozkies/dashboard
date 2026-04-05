@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DbUser, DbCommit, DbPullRequest, DbTask } from '../../lib/supabase';
+import { supabase, DbUser, DbCommit, DbPullRequest, DbTask } from '../../lib/supabase';
 import { getTeamMembers, getRecentCommits, getPullRequests, getProjects, getTasksBySprint, getSprintsByProject } from '../../lib/queries';
 
 // ── Bar chart (pure CSS) ──────────────────────────────────
@@ -35,50 +35,63 @@ function BarChart({ data, labels, color, height = 100 }: {
   );
 }
 
-// ── Burndown line chart (SVG) ─────────────────────────────
+// ── Burndown line chart (SVG) — uses real task data ───────
 
-function BurndownChart({ total, completed }: { total: number; completed: number }) {
-  const days = 14;
-  const w = 400;
-  const h = 120;
+function BurndownChart({ tasks, startDate, endDate }: {
+  tasks: DbTask[];
+  startDate: string | null;
+  endDate: string | null;
+}) {
+  const total = tasks.reduce((a, t) => a + t.points, 0);
+
+  // Determine sprint window
+  const start = startDate ? new Date(startDate) : (() => { const d = new Date(); d.setDate(d.getDate() - 14); return d; })();
+  const end = endDate ? new Date(endDate) : new Date();
+  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
+
+  // Build actual burndown: for each day, count remaining points
+  // (tasks completed on or before that day are burned)
+  const dayPoints: number[] = Array.from({ length: days + 1 }, (_, i) => {
+    const dayDate = new Date(start);
+    dayDate.setDate(start.getDate() + i);
+    const remaining = tasks.filter(t => {
+      if (t.status !== 'done') return true;
+      // We don't have a completed_at field, so use created_at as proxy
+      return new Date(t.created_at) > dayDate;
+    }).reduce((a, t) => a + t.points, 0);
+    return remaining;
+  });
+
+  const ideal = Array.from({ length: days + 1 }, (_, i) => total - (total / days) * i);
+
+  const w = 400; const h = 120;
   const pad = { t: 10, r: 10, b: 24, l: 30 };
   const iw = w - pad.l - pad.r;
   const ih = h - pad.t - pad.b;
-
-  // Ideal: linear from total → 0
-  const ideal = Array.from({ length: days + 1 }, (_, i) => total - (total / days) * i);
-  // Actual: slightly above ideal with noise
-  const actual = Array.from({ length: days + 1 }, (_, i) => {
-    if (i === 0) return total;
-    const idealPt = total - (total / days) * i;
-    return Math.max(0, idealPt + (Math.random() - 0.3) * (total * 0.08));
-  });
+  const maxVal = Math.max(total, 1);
 
   const xScale = (i: number) => pad.l + (i / days) * iw;
-  const yScale = (v: number) => pad.t + ih - (v / total) * ih;
+  const yScale = (v: number) => pad.t + ih - (v / maxVal) * ih;
+  const toPath = (pts: number[]) => pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`).join(' ');
 
-  const toPath = (pts: number[]) =>
-    pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`).join(' ');
+  if (total === 0) {
+    return (
+      <div className="h-[120px] flex items-center justify-center text-[11px] text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
+        no tasks in this sprint yet
+      </div>
+    );
+  }
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: 'auto' }}>
-      {/* Grid lines */}
       {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-        <line key={pct}
-          x1={pad.l} y1={pad.t + ih * (1 - pct)}
-          x2={pad.l + iw} y2={pad.t + ih * (1 - pct)}
-          stroke="#1a2540" strokeWidth="0.5"
-        />
+        <line key={pct} x1={pad.l} y1={pad.t + ih * (1 - pct)} x2={pad.l + iw} y2={pad.t + ih * (1 - pct)} stroke="#1a2540" strokeWidth="0.5" />
       ))}
-      {/* Ideal line */}
       <path d={toPath(ideal)} fill="none" stroke="#3d5278" strokeWidth="1" strokeDasharray="4 3" />
-      {/* Actual line */}
-      <path d={toPath(actual)} fill="none" stroke="#4a9eff" strokeWidth="1.5" />
-      {/* Dots */}
-      {actual.map((v, i) => (
+      <path d={toPath(dayPoints)} fill="none" stroke="#4a9eff" strokeWidth="1.5" />
+      {dayPoints.map((v, i) => (
         <circle key={i} cx={xScale(i)} cy={yScale(v)} r={2} fill="#4a9eff" />
       ))}
-      {/* Axis labels */}
       <text x={pad.l} y={h - 6} fill="#2d3d5a" fontSize={8} fontFamily="monospace">Day 1</text>
       <text x={pad.l + iw} y={h - 6} fill="#2d3d5a" fontSize={8} fontFamily="monospace" textAnchor="end">Day {days}</text>
       <text x={pad.l - 4} y={pad.t + 4} fill="#2d3d5a" fontSize={8} fontFamily="monospace" textAnchor="end">{total}</text>
@@ -102,6 +115,9 @@ export default function ReportsPage() {
   const [stats, setStats] = useState<MemberStats[]>([]);
   const [totalPts, setTotalPts] = useState(0);
   const [donePts, setDonePts] = useState(0);
+  const [sprintTasks, setSprintTasks] = useState<DbTask[]>([]);
+  const [sprintStartDate, setSprintStartDate] = useState<string | null>(null);
+  const [sprintEndDate, setSprintEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Velocity: story points completed per sprint (mock with real data fallback)
@@ -121,7 +137,10 @@ export default function ReportsPage() {
       if (projects.length > 0) {
         const sprintList = await getSprintsByProject(projects[0].id);
         if (sprintList.length > 0) {
-          tasks = await getTasksBySprint(sprintList[0].id);
+          const sprint = sprintList[0];
+          tasks = await getTasksBySprint(sprint.id);
+          setSprintStartDate(sprint.start_date ?? null);
+          setSprintEndDate(sprint.end_date ?? null);
         }
       }
 
@@ -129,6 +148,7 @@ export default function ReportsPage() {
       const dp = tasks.filter(t => t.status === 'done').reduce((a, t) => a + t.points, 0);
       setTotalPts(tp);
       setDonePts(dp);
+      setSprintTasks(tasks);
 
       const memberStats: MemberStats[] = m.map((member: DbUser) => ({
         member,
@@ -210,7 +230,7 @@ export default function ReportsPage() {
                   <span className="flex items-center gap-1"><span className="inline-block w-4 border-b border-[#4a9eff]" /> actual</span>
                 </div>
               </div>
-              <BurndownChart total={totalPts || 80} completed={donePts || 45} />
+              <BurndownChart tasks={sprintTasks} startDate={sprintStartDate} endDate={sprintEndDate} />
             </div>
           </div>
 

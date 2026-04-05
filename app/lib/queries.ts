@@ -250,3 +250,36 @@ export async function getDashboardMetrics(projectId?: string) {
 
   return { totalCommits, openPRs, doneTasks, totalTasks, sprintPct };
 }
+
+export async function createSprint(sprint: { project_id: string; name: string; number: number; start_date: string | null; end_date: string | null }) {
+  const { data, error } = await supabase.from('sprints').insert(sprint).select().single();
+  if (error) { console.error('createSprint:', error.message); return null; }
+  return data;
+}
+
+export async function createUser(user: Omit<import('./supabase').DbUser, 'id' | 'created_at' | 'auth_id'>) {
+  const { data, error } = await supabase.from('users').insert({ ...user, auth_id: null }).select().single();
+  if (error) { console.error('createUser:', error.message); return null; }
+  return data;
+}
+
+export async function updateSprintZone(sprintId: string, label: string, pct: number) {
+  const { error } = await supabase
+    .from('sprint_zones')
+    .update({ pct })
+    .eq('sprint_id', sprintId)
+    .eq('label', label);
+  if (error) console.error('updateSprintZone:', error.message);
+}
+
+export async function createSprintZones(sprintId: string) {
+  const zones = [
+    { sprint_id: sprintId, label: 'Frontend', pct: 0, color: '#4a9eff' },
+    { sprint_id: sprintId, label: 'Backend', pct: 0, color: '#22c55e' },
+    { sprint_id: sprintId, label: 'Database', pct: 0, color: '#a855f7' },
+    { sprint_id: sprintId, label: 'Auth', pct: 0, color: '#f59e0b' },
+    { sprint_id: sprintId, label: 'DevOps', pct: 0, color: '#ef4444' },
+  ];
+  const { error } = await supabase.from('sprint_zones').insert(zones);
+  if (error) console.error('createSprintZones:', error.message);
+}
