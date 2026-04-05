@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DbUser, DbCommit, DbPullRequest } from '../../../lib/supabase';
-import { getTeamMembers, getRecentCommits, getPullRequests, createUser } from '../../../lib/queries';
+import { DbUser, DbCommit, DbPullRequest } from '../../lib/supabase';
+import { getTeamMembers, getRecentCommits, getPullRequests, createUser } from '../../lib/queries';
 import { useAuth } from '../../components/AuthProvider';
 
 // ── Activity heatmap (last 30 days from commits) ──────────
@@ -28,7 +28,7 @@ function ActivityHeatmap({ commits }: { commits: DbCommit[] }) {
     if (n === 0) return '#0d1222';
     const pct = n / max;
     if (pct < 0.25) return '#0a1f3a';
-    if (pct < 0.5)  return '#1a3060';
+    if (pct < 0.5) return '#1a3060';
     if (pct < 0.75) return '#2a4a90';
     return '#4a9eff';
   };

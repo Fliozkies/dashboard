@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { supabase, DbProject, DbAnnotation, DbUser } from '../../../lib/supabase';
-import { getProjects, getAnnotations, createAnnotation, addAnnotationComment, resolveAnnotation, getBranches, createBranch } from '../../../lib/queries';
+import { supabase, DbProject, DbAnnotation, DbUser } from '../../lib/supabase';
+import { getProjects, getAnnotations, createAnnotation, addAnnotationComment, resolveAnnotation, getBranches, createBranch } from '../../lib/queries';
 import { useAuth } from '../../components/AuthProvider';
 
 // ── Types ─────────────────────────────────────────────────
@@ -11,9 +11,9 @@ type Viewport = 'mobile' | 'tablet' | 'desktop';
 
 const viewportWidths: Record<Viewport, number> = { mobile: 375, tablet: 768, desktop: 1280 };
 const severityColors: Record<Severity, { bg: string; color: string; border: string; label: string }> = {
-  blocker:    { bg: '#2a0808', color: '#ef4444', border: '#5a1010', label: 'Blocker' },
+  blocker: { bg: '#2a0808', color: '#ef4444', border: '#5a1010', label: 'Blocker' },
   suggestion: { bg: '#0a1428', color: '#4a9eff', border: '#1a3060', label: 'Suggest' },
-  question:   { bg: '#1f1500', color: '#f59e0b', border: '#3a2800', label: 'Question' },
+  question: { bg: '#1f1500', color: '#f59e0b', border: '#3a2800', label: 'Question' },
 };
 
 // ── Fake cursors (presence stub) ──────────────────────────

@@ -1,16 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase, DbTask, DbUser } from '../../../lib/supabase';
-import { getTasksBySprint, updateTaskStatus, createTask, getSprintsByProject, getProjects, createSprint, createSprintZones } from '../../../lib/queries';
+import { supabase, DbTask, DbUser } from '../../lib/supabase';
+import { getTasksBySprint, updateTaskStatus, createTask, getSprintsByProject, getProjects, createSprint, createSprintZones } from '../../lib/queries';
 import { useAuth } from '../../components/AuthProvider';
 
 type Column = { id: DbTask['status']; label: string; color: string };
 
 const COLUMNS: Column[] = [
-  { id: 'backlog',     label: 'Backlog',     color: '#3d5278' },
+  { id: 'backlog', label: 'Backlog', color: '#3d5278' },
   { id: 'in_progress', label: 'In Progress', color: '#4a9eff' },
-  { id: 'in_review',  label: 'In Review',   color: '#f59e0b' },
-  { id: 'done',       label: 'Done',        color: '#22c55e' },
+  { id: 'in_review', label: 'In Review', color: '#f59e0b' },
+  { id: 'done', label: 'Done', color: '#22c55e' },
 ];
 
 const PRIORITY_STYLES: Record<string, { bg: string; color: string; border: string }> = {
@@ -280,7 +280,7 @@ export default function SprintsPage() {
   }
 
   const totalPts = tasks.reduce((a, t) => a + t.points, 0);
-  const donePts  = tasks.filter(t => t.status === 'done').reduce((a, t) => a + t.points, 0);
+  const donePts = tasks.filter(t => t.status === 'done').reduce((a, t) => a + t.points, 0);
   const currentSprint = sprints.find(s => s.id === sprintId);
 
   return (
