@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { supabase, DbProject, DbAnnotation, DbUser } from '../../lib/supabase';
-import { getProjects, getAnnotations, createAnnotation, addAnnotationComment, resolveAnnotation, getBranches, createBranch } from '../../lib/queries';
+import { supabase, DbProject, DbAnnotation, DbUser } from '../../../lib/supabase';
+import { getProjects, getAnnotations, createAnnotation, addAnnotationComment, resolveAnnotation, getBranches, createBranch } from '../../../lib/queries';
+import { useAuth } from '../../components/AuthProvider';
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -10,9 +11,9 @@ type Viewport = 'mobile' | 'tablet' | 'desktop';
 
 const viewportWidths: Record<Viewport, number> = { mobile: 375, tablet: 768, desktop: 1280 };
 const severityColors: Record<Severity, { bg: string; color: string; border: string; label: string }> = {
-  blocker: { bg: '#2a0808', color: '#ef4444', border: '#5a1010', label: 'Blocker' },
+  blocker:    { bg: '#2a0808', color: '#ef4444', border: '#5a1010', label: 'Blocker' },
   suggestion: { bg: '#0a1428', color: '#4a9eff', border: '#1a3060', label: 'Suggest' },
-  question: { bg: '#1f1500', color: '#f59e0b', border: '#3a2800', label: 'Question' },
+  question:   { bg: '#1f1500', color: '#f59e0b', border: '#3a2800', label: 'Question' },
 };
 
 // ── Fake cursors (presence stub) ──────────────────────────
@@ -612,6 +613,8 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
 // ── Main Page ─────────────────────────────────────────────
 
 export default function ProjectsPage() {
+  const authUser = useAuth();
+  const canWrite = !!authUser;
   const [projects, setProjects] = useState<DbProject[]>([]);
   const [activeProject, setActiveProject] = useState<DbProject | null>(null);
   const [currentUser, setCurrentUser] = useState<DbUser | null>(null);
@@ -663,22 +666,26 @@ export default function ProjectsPage() {
           </div>
           <div className="text-[20px] font-semibold text-[#e8f0ff]">All Projects</div>
         </div>
-        <button
-          onClick={() => setShowNewProject(true)}
-          className="px-4 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer"
-          style={{ fontFamily: 'var(--font-space-mono)' }}
-        >
-          + new project
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => setShowNewProject(true)}
+            className="px-4 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer"
+            style={{ fontFamily: 'var(--font-space-mono)' }}
+          >
+            + new project
+          </button>
+        )}
       </div>
 
       {projects.length === 0 ? (
         <div className="text-center py-16 text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
           <div className="text-[32px] mb-3 opacity-30">◉</div>
           <div className="text-[12px]">no projects yet</div>
-          <div className="text-[11px] mt-1 cursor-pointer hover:text-[#4a9eff] transition-colors" onClick={() => setShowNewProject(true)}>
-            click + new project to get started
-          </div>
+          {canWrite && (
+            <div className="text-[11px] mt-1 cursor-pointer hover:text-[#4a9eff] transition-colors" onClick={() => setShowNewProject(true)}>
+              click + new project to get started
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>

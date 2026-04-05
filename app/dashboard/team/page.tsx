@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DbUser, DbCommit, DbPullRequest } from '../../lib/supabase';
-import { getTeamMembers, getRecentCommits, getPullRequests, createUser } from '../../lib/queries';
+import { DbUser, DbCommit, DbPullRequest } from '../../../lib/supabase';
+import { getTeamMembers, getRecentCommits, getPullRequests, createUser } from '../../../lib/queries';
+import { useAuth } from '../../components/AuthProvider';
 
 // ── Activity heatmap (last 30 days from commits) ──────────
 
@@ -27,7 +28,7 @@ function ActivityHeatmap({ commits }: { commits: DbCommit[] }) {
     if (n === 0) return '#0d1222';
     const pct = n / max;
     if (pct < 0.25) return '#0a1f3a';
-    if (pct < 0.5) return '#1a3060';
+    if (pct < 0.5)  return '#1a3060';
     if (pct < 0.75) return '#2a4a90';
     return '#4a9eff';
   };
@@ -262,6 +263,8 @@ function NewMemberModal({ onClose, onCreated }: { onClose: () => void; onCreated
 // ── Main page ─────────────────────────────────────────────
 
 export default function TeamPage() {
+  const authUser = useAuth();
+  const canWrite = !!authUser;
   const [members, setMembers] = useState<DbUser[]>([]);
   const [commits, setCommits] = useState<DbCommit[]>([]);
   const [prs, setPRs] = useState<DbPullRequest[]>([]);
@@ -295,13 +298,15 @@ export default function TeamPage() {
           </div>
           <div className="text-[20px] font-semibold text-[#e8f0ff]">Team Members</div>
         </div>
-        <button
-          onClick={() => setShowNewMember(true)}
-          className="px-4 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer"
-          style={{ fontFamily: 'var(--font-space-mono)' }}
-        >
-          + add member
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => setShowNewMember(true)}
+            className="px-4 py-2 rounded-lg text-[12px] font-medium text-[#4a9eff] border border-[#1a3060] hover:bg-[#0d1a30] transition-all cursor-pointer"
+            style={{ fontFamily: 'var(--font-space-mono)' }}
+          >
+            + add member
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -310,12 +315,14 @@ export default function TeamPage() {
         <div className="text-center py-16 text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
           <div className="text-[32px] mb-3 opacity-30">◎</div>
           <div className="text-[12px]">no team members yet</div>
-          <button
-            onClick={() => setShowNewMember(true)}
-            className="mt-3 text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
-          >
-            + add your first member
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => setShowNewMember(true)}
+              className="mt-3 text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
+            >
+              + add your first member
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
@@ -370,7 +377,7 @@ export default function TeamPage() {
         </div>
       )}
 
-      {showNewMember && (
+      {canWrite && showNewMember && (
         <NewMemberModal
           onClose={() => setShowNewMember(false)}
           onCreated={(u) => setMembers(prev => [...prev, u])}

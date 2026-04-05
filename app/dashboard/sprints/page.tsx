@@ -1,15 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase, DbTask, DbUser } from '../../lib/supabase';
-import { getTasksBySprint, updateTaskStatus, createTask, getSprintsByProject, getProjects, createSprint, createSprintZones } from '../../lib/queries';
+import { supabase, DbTask, DbUser } from '../../../lib/supabase';
+import { getTasksBySprint, updateTaskStatus, createTask, getSprintsByProject, getProjects, createSprint, createSprintZones } from '../../../lib/queries';
+import { useAuth } from '../../components/AuthProvider';
 
 type Column = { id: DbTask['status']; label: string; color: string };
 
 const COLUMNS: Column[] = [
-  { id: 'backlog', label: 'Backlog', color: '#3d5278' },
+  { id: 'backlog',     label: 'Backlog',     color: '#3d5278' },
   { id: 'in_progress', label: 'In Progress', color: '#4a9eff' },
-  { id: 'in_review', label: 'In Review', color: '#f59e0b' },
-  { id: 'done', label: 'Done', color: '#22c55e' },
+  { id: 'in_review',  label: 'In Review',   color: '#f59e0b' },
+  { id: 'done',       label: 'Done',        color: '#22c55e' },
 ];
 
 const PRIORITY_STYLES: Record<string, { bg: string; color: string; border: string }> = {
@@ -223,6 +224,8 @@ function NewSprintModal({ projectId, nextNumber, onClose, onCreated }: {
 }
 
 export default function SprintsPage() {
+  const authUser = useAuth();
+  const canWrite = !!authUser;
   const [tasks, setTasks] = useState<DbTask[]>([]);
   const [sprintId, setSprintId] = useState<string | null>(null);
   const [sprints, setSprints] = useState<{ id: string; name: string; number: number }[]>([]);
@@ -277,7 +280,7 @@ export default function SprintsPage() {
   }
 
   const totalPts = tasks.reduce((a, t) => a + t.points, 0);
-  const donePts = tasks.filter(t => t.status === 'done').reduce((a, t) => a + t.points, 0);
+  const donePts  = tasks.filter(t => t.status === 'done').reduce((a, t) => a + t.points, 0);
   const currentSprint = sprints.find(s => s.id === sprintId);
 
   return (
@@ -306,7 +309,7 @@ export default function SprintsPage() {
               ))}
             </div>
           )}
-          {projectId && (
+          {canWrite && projectId && (
             <button
               onClick={() => setShowNewSprint(true)}
               className="text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
@@ -341,7 +344,7 @@ export default function SprintsPage() {
         <div className="text-center py-16 text-[#2d3d5a]" style={{ fontFamily: 'var(--font-space-mono)' }}>
           <div className="text-[32px] mb-3 opacity-30">⬡</div>
           <div className="text-[12px]">no sprints yet</div>
-          {projectId && (
+          {canWrite && projectId && (
             <button
               onClick={() => setShowNewSprint(true)}
               className="mt-3 text-[11px] px-3 py-1.5 rounded border border-[#1a3060] text-[#4a9eff] hover:bg-[#0d1a30] transition-all cursor-pointer"
@@ -382,7 +385,7 @@ export default function SprintsPage() {
                       onAdd={handleAdd}
                       onClose={() => setAddingTo(null)}
                     />
-                  ) : (
+                  ) : canWrite ? (
                     <button
                       onClick={() => setAddingTo(col.id)}
                       className="text-[11px] text-[#2d3d5a] hover:text-[#4a9eff] transition-colors text-left px-1 py-1 cursor-pointer"
@@ -390,7 +393,7 @@ export default function SprintsPage() {
                     >
                       + add task
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );
